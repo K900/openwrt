@@ -19,7 +19,7 @@
     connections. */
 --- a/include/linux/if_bridge.h
 +++ b/include/linux/if_bridge.h
-@@ -61,6 +61,9 @@ struct br_ip_list {
+@@ -62,6 +62,9 @@ struct br_ip_list {
  #define BR_DEFAULT_AGEING_TIME	(300 * HZ)
  
  extern void brioctl_set(int (*ioctl_hook)(struct net *, unsigned int, void __user *));
@@ -29,7 +29,7 @@
  
  #if IS_ENABLED(CONFIG_BRIDGE) && IS_ENABLED(CONFIG_BRIDGE_IGMP_SNOOPING)
  int br_multicast_list_adjacent(struct net_device *dev,
-@@ -156,4 +159,41 @@ br_port_flag_is_set(const struct net_dev
+@@ -157,4 +160,41 @@ br_port_flag_is_set(const struct net_dev
  }
  #endif
  
@@ -104,7 +104,7 @@
  		     __be16 vlan_proto, u16 vlan_id)
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
-@@ -2756,6 +2756,10 @@ enum netdev_cmd {
+@@ -2757,6 +2757,10 @@ enum netdev_cmd {
  	NETDEV_CVLAN_FILTER_DROP_INFO,
  	NETDEV_SVLAN_FILTER_PUSH_INFO,
  	NETDEV_SVLAN_FILTER_DROP_INFO,
@@ -218,7 +218,7 @@
  fs_initcall(vlan_offload_init);
 --- a/net/bridge/br_fdb.c
 +++ b/net/bridge/br_fdb.c
-@@ -37,6 +37,35 @@ static int fdb_insert(struct net_bridge
+@@ -38,6 +38,35 @@ static int fdb_insert(struct net_bridge
  static void fdb_notify(struct net_bridge *br,
  		       const struct net_bridge_fdb_entry *, int, bool);
  
@@ -254,7 +254,7 @@
  int __init br_fdb_init(void)
  {
  	br_fdb_cache = kmem_cache_create("bridge_fdb_cache",
-@@ -342,6 +371,7 @@ void br_fdb_cleanup(struct work_struct *
+@@ -343,6 +372,7 @@ void br_fdb_cleanup(struct work_struct *
  	unsigned long delay = hold_time(br);
  	unsigned long work_delay = delay;
  	unsigned long now = jiffies;
@@ -262,7 +262,7 @@
  
  	/* this part is tricky, in order to avoid blocking learning and
  	 * consequently forwarding, we rely on rcu to delete objects with
-@@ -368,8 +398,15 @@ void br_fdb_cleanup(struct work_struct *
+@@ -369,8 +399,15 @@ void br_fdb_cleanup(struct work_struct *
  			work_delay = min(work_delay, this_timer - now);
  		} else {
  			spin_lock_bh(&br->hash_lock);
@@ -279,7 +279,7 @@
  			spin_unlock_bh(&br->hash_lock);
  		}
  	}
-@@ -610,6 +647,12 @@ void br_fdb_update(struct net_bridge *br
+@@ -613,6 +650,12 @@ void br_fdb_update(struct net_bridge *br
  						      &fdb->flags)))
  					clear_bit(BR_FDB_ADDED_BY_EXT_LEARN,
  						  &fdb->flags);
@@ -292,9 +292,9 @@
  			}
  
  			if (unlikely(test_bit(BR_FDB_ADDED_BY_USER, &flags)))
-@@ -734,6 +777,25 @@ static void fdb_notify(struct net_bridge
- 	struct sk_buff *skb;
- 	int err = -ENOBUFS;
+@@ -739,6 +782,25 @@ static void fdb_notify(struct net_bridge
+ 
+ 	br_offload_fdb_update(fdb);
  
 +	/* QCA NSS ECM support - Start */
 +	if (fdb->dst) {
@@ -318,7 +318,7 @@
  	if (swdev_notify)
  		br_switchdev_fdb_notify(br, fdb, type);
  
-@@ -1317,3 +1379,44 @@ void br_fdb_clear_offload(const struct n
+@@ -1322,3 +1384,44 @@ void br_fdb_clear_offload(const struct n
  	spin_unlock_bh(&p->br->hash_lock);
  }
  EXPORT_SYMBOL_GPL(br_fdb_clear_offload);
@@ -365,9 +365,9 @@
 +
 --- a/net/bridge/br_if.c
 +++ b/net/bridge/br_if.c
-@@ -26,6 +26,12 @@
- 
+@@ -27,6 +27,12 @@
  #include "br_private.h"
+ #include "br_private_offload.h"
  
 +/* QCA NSS ECM support - Start */
 +/* Hook for external forwarding logic */
@@ -378,7 +378,7 @@
  /*
   * Determine initial path cost based on speed.
   * using recommendations from 802.1d standard
-@@ -711,6 +717,8 @@ int br_add_if(struct net_bridge *br, str
+@@ -712,6 +718,8 @@ int br_add_if(struct net_bridge *br, str
  
  	kobject_uevent(&p->kobj, KOBJ_ADD);
  
@@ -387,7 +387,7 @@
  	return 0;
  
  err7:
-@@ -747,6 +755,8 @@ int br_del_if(struct net_bridge *br, str
+@@ -748,6 +756,8 @@ int br_del_if(struct net_bridge *br, str
  	if (!p || p->br != br)
  		return -EINVAL;
  
@@ -396,7 +396,7 @@
  	/* Since more than one interface can be attached to a bridge,
  	 * there still maybe an alternate path for netconsole to use;
  	 * therefore there is no reason for a NETDEV_RELEASE event.
-@@ -790,3 +800,98 @@ bool br_port_flag_is_set(const struct ne
+@@ -794,3 +804,98 @@ bool br_port_flag_is_set(const struct ne
  	return p->flags & flag;
  }
  EXPORT_SYMBOL_GPL(br_port_flag_is_set);
@@ -497,7 +497,7 @@
 +/* QCA NSS ECM support - End */
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
-@@ -1591,4 +1591,9 @@ void br_do_proxy_suppress_arp(struct sk_
+@@ -1609,4 +1609,9 @@ void br_do_proxy_suppress_arp(struct sk_
  void br_do_suppress_nd(struct sk_buff *skb, struct net_bridge *br,
  		       u16 vid, struct net_bridge_port *p, struct nd_msg *msg);
  struct nd_msg *br_is_nd_neigh_msg(struct sk_buff *skb, struct nd_msg *m);
@@ -509,7 +509,7 @@
  #endif
 --- a/net/core/neighbour.c
 +++ b/net/core/neighbour.c
-@@ -1210,7 +1210,21 @@ static void neigh_update_hhs(struct neig
+@@ -1209,7 +1209,21 @@ static void neigh_update_hhs(struct neig
  	}
  }
  
@@ -531,7 +531,7 @@
  
  /* Generic update routine.
     -- lladdr is new lladdr or NULL, if it is not supplied.
-@@ -1241,6 +1255,7 @@ static int __neigh_update(struct neighbo
+@@ -1240,6 +1254,7 @@ static int __neigh_update(struct neighbo
  	int notify = 0;
  	struct net_device *dev;
  	int update_isrouter = 0;
@@ -539,7 +539,7 @@
  
  	trace_neigh_update(neigh, lladdr, new, flags, nlmsg_pid);
  
-@@ -1255,6 +1270,8 @@ static int __neigh_update(struct neighbo
+@@ -1254,6 +1269,8 @@ static int __neigh_update(struct neighbo
  		new = old;
  		goto out;
  	}
@@ -548,7 +548,7 @@
  	if (!(flags & NEIGH_UPDATE_F_ADMIN) &&
  	    (old & (NUD_NOARP | NUD_PERMANENT)))
  		goto out;
-@@ -1292,6 +1309,11 @@ static int __neigh_update(struct neighbo
+@@ -1291,6 +1308,11 @@ static int __neigh_update(struct neighbo
  		   - compare new & old
  		   - if they are different, check override flag
  		 */
@@ -560,7 +560,7 @@
  		if ((old & NUD_VALID) &&
  		    !memcmp(lladdr, neigh->ha, dev->addr_len))
  			lladdr = neigh->ha;
-@@ -1414,8 +1436,11 @@ out:
+@@ -1413,8 +1435,11 @@ out:
  	if (((new ^ old) & NUD_PERMANENT) || ext_learn_change)
  		neigh_update_gc_list(neigh);
  
@@ -628,7 +628,7 @@
  	struct fib_table *tb;
 --- a/include/net/addrconf.h
 +++ b/include/net/addrconf.h
-@@ -501,4 +501,9 @@ int if6_proc_init(void);
+@@ -503,4 +503,9 @@ int if6_proc_init(void);
  void if6_proc_exit(void);
  #endif
  
@@ -640,7 +640,7 @@
  #endif
 --- a/net/ipv6/addrconf.c
 +++ b/net/ipv6/addrconf.c
-@@ -7236,3 +7236,35 @@ void addrconf_cleanup(void)
+@@ -7249,3 +7249,35 @@ void addrconf_cleanup(void)
  
  	destroy_workqueue(addrconf_wq);
  }
@@ -719,7 +719,7 @@
  out:
  	fib6_info_release(rt);
  	return err;
-@@ -6151,6 +6161,20 @@ static int ip6_route_dev_notify(struct n
+@@ -6179,6 +6189,20 @@ static int ip6_route_dev_notify(struct n
  	return NOTIFY_OK;
  }
  
